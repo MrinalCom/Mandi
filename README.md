@@ -10,10 +10,20 @@ farmer a price board before they sell, direct listings with no commission layer,
 pooling for bulk orders, and a dashboard that shows what they actually earned versus the
 mandi average.
 
+## Screenshots
+
+| | |
+|---|---|
+| ![Landing page](./docs/screenshots/home.jpg) | ![Marketplace](./docs/screenshots/marketplace.jpg) |
+| Landing page — multi-language slogan strip and a live mandi price ticker | Marketplace — direct listings with photos, no commission layer |
+| ![Mandi price board](./docs/screenshots/mandi-prices.jpg) | ![Farmer dashboard](./docs/screenshots/dashboard.jpg) |
+| Mandi price board — min/max/modal price per crop, per mandi | Farmer dashboard — your price vs. that day's mandi average |
+
 ## Stack
 
 - **Backend:** Express + TypeScript, PostgreSQL, JWT auth, Socket.IO (live order status)
-- **Frontend:** Next.js (App Router, TypeScript), Recharts, English/Hindi label toggle
+- **Frontend:** Next.js (App Router, TypeScript), Recharts, English/Hindi label toggle,
+  curated crop photography
 
 ## Run locally
 
@@ -29,6 +39,19 @@ Seed demo accounts and sample listings (run once, after the backend is up):
 ```bash
 cd backend && npm run seed
 ```
+
+Load a fuller mandi price board — 18 crops × 17 mandis across India, three weeks of
+daily history:
+
+```bash
+cd backend && npm run fetch-prices
+```
+
+With `AGMARKNET_API_KEY` set in `.env` (get one at
+[data.gov.in/user/register](https://data.gov.in/user/register)), this pulls live prices
+from the government's actual Agmarknet feed. Without a key it falls back to a
+realistically-shaped synthetic dataset — same schema either way, so the rest of the app
+doesn't care which source populated it.
 
 Demo logins (password `password123`):
 

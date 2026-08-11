@@ -2,10 +2,32 @@
 
 import Link from "next/link";
 import { useLang } from "./lib/i18n";
-import { FARMER_HERO_IMAGE } from "./lib/cropImages";
+import { FARMER_HERO_IMAGE, getCropImageUrl } from "./lib/cropImages";
 import CropImage from "./components/CropImage";
+import LangMarquee from "./components/LangMarquee";
+import PriceTicker from "./components/PriceTicker";
+import StatCounter from "./components/StatCounter";
 
 const GALLERY_CROPS = ["Tomato", "Onion", "Potato", "Wheat", "Rice", "Mango"];
+
+const STEPS = [
+  {
+    title: "Check the mandi price",
+    body: "See today's min/max/modal price for your crop across nearby mandis before you decide what to ask.",
+  },
+  {
+    title: "List or pool your harvest",
+    body: "Post a listing directly, or join a pool with nearby farmers selling the same crop to meet a bulk order.",
+  },
+  {
+    title: "Buyer orders, you track it",
+    body: "A buyer commits and pays into escrow. Track pickup and delivery status in real time on the Orders page.",
+  },
+  {
+    title: "Get paid, see the gap",
+    body: "Payment releases on delivery. Your dashboard shows exactly how your price compared to the mandi average.",
+  },
+];
 
 export default function HomePage() {
   const { t } = useLang();
@@ -41,6 +63,9 @@ export default function HomePage() {
         </div>
       </div>
 
+      <LangMarquee />
+      <PriceTicker />
+
       <div className="container page">
         <div className="section-title"><h2>Fresh from the field</h2></div>
         <div className="card-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 18 }}>
@@ -50,6 +75,29 @@ export default function HomePage() {
               <div style={{ padding: "14px 12px", fontWeight: 700 }}>{crop}</div>
             </Link>
           ))}
+        </div>
+      </div>
+
+      <div className="container" style={{ paddingBottom: 56 }}>
+        <div className="section-title"><h2>How it works</h2></div>
+        <div className="steps-row">
+          {STEPS.map((s, i) => (
+            <div key={s.title} className="step-card">
+              <div className="step-number">{i + 1}</div>
+              <h3 style={{ fontSize: 18 }}>{s.title}</h3>
+              <p style={{ marginBottom: 0 }}>{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="container" style={{ paddingBottom: 56 }}>
+        <div className="section-title"><h2>What's already live</h2></div>
+        <div className="counter-row">
+          <StatCounter target={0} suffix="%" label="Commission taken by Mandi" />
+          <StatCounter target={9} suffix="+" label="Crops on the price board" />
+          <StatCounter target={8} label="Mandis tracked for pricing" />
+          <StatCounter target={2} label="Languages, more on the way" />
         </div>
       </div>
 
@@ -75,7 +123,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 40, marginBottom: 40 }} className="card">
+        <div style={{ marginTop: 40, marginBottom: 56 }} className="card">
           <h3>Why not just use eNAM or an existing agri app?</h3>
           <p>
             eNAM still assumes a trip to a physical mandi, and platforms built for bulk B2B supply chains or
@@ -83,6 +131,21 @@ export default function HomePage() {
             and patchy connectivity further shut out the farmers who&apos;d benefit most. Mandi is scoped
             narrowly around that gap — see <code>PROBLEM.md</code> in the repo for sources and the full plan.
           </p>
+        </div>
+
+        <div className="cta-banner">
+          <div className="cta-banner-bg">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={getCropImageUrl("Wheat", "w=1600&h=700&fit=crop&q=80")} alt="" />
+          </div>
+          <h2>Ready to skip the middleman?</h2>
+          <p>List your harvest in minutes, or browse the marketplace to buy directly from farmers near you.</p>
+          <div style={{ display: "flex", gap: 14, marginTop: 22, justifyContent: "center", flexWrap: "wrap" }}>
+            <Link href="/register" className="btn btn-primary btn-lg">{t("listYourHarvest")}</Link>
+            <Link href="/marketplace" className="btn btn-lg" style={{ background: "rgba(255,255,255,0.14)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)" }}>
+              {t("marketplace")}
+            </Link>
+          </div>
         </div>
       </div>
     </div>

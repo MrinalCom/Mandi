@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p .",
     "start": "node dist/index.js",
-    "seed": "tsx src/scripts/seed.ts"
+    "seed": "tsx src/scripts/seed.ts",
+    "fetch-prices": "tsx src/scripts/fetchMandiPrices.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
