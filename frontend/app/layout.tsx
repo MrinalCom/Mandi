@@ -4,6 +4,7 @@ import { AuthProvider } from "./lib/AuthContext";
 import { CartProvider } from "./lib/CartContext";
 import { LangProvider } from "./lib/i18n";
 import Nav from "./components/Nav";
+import Footer from "./components/Footer";
 
 export const metadata = {
   title: "Mandi — Sell your harvest directly",
@@ -17,8 +18,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <LangProvider>
           <AuthProvider>
             <CartProvider>
-              <Nav />
-              {children}
+              <div className="app-shell">
+                <Nav />
+                <main className="app-main">{children}</main>
+                <Footer />
+              </div>
             </CartProvider>
           </AuthProvider>
         </LangProvider>

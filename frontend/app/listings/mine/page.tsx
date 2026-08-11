@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/AuthContext";
+import CropImage from "../../components/CropImage";
 
 interface Listing {
   id: string;
@@ -68,6 +69,7 @@ export default function MyListingsPage() {
       <div className="card-grid">
         {listings.map((l) => (
           <div key={l.id} className="card">
+            <CropImage cropName={l.crop_name} />
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <h3>{l.crop_name}{l.variety ? ` — ${l.variety}` : ""}</h3>
               <span className={`badge ${statusBadge[l.status] ?? "badge-gray"}`}>{l.status}</span>

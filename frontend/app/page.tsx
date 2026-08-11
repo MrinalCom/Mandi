@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useLang } from "./lib/i18n";
+import { FARMER_HERO_IMAGE } from "./lib/cropImages";
+import CropImage from "./components/CropImage";
+
+const GALLERY_CROPS = ["Tomato", "Onion", "Potato", "Wheat", "Rice", "Mango"];
 
 export default function HomePage() {
   const { t } = useLang();
@@ -9,17 +13,25 @@ export default function HomePage() {
   return (
     <div>
       <div className="hero">
+        <div className="hero-bg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${FARMER_HERO_IMAGE}?w=1800&h=1000&fit=crop&q=80`} alt="" />
+        </div>
         <div className="container">
-          <span className="badge badge-amber">Built for farmers, not middlemen</span>
+          <span className="badge" style={{ background: "rgba(255,255,255,0.16)", color: "#fff" }}>
+            Built for farmers, not middlemen
+          </span>
           <h1>{t("tagline")}</h1>
           <p className="lead">
             Mandi is a direct farmer-to-buyer marketplace. Check today&apos;s real mandi price before you sell,
             list your harvest, or pool it with nearby farmers to meet a bulk buyer&apos;s order — all without
             handing 30–46% of the sale to a chain of intermediaries.
           </p>
-          <div style={{ display: "flex", gap: 12, marginTop: 24, flexWrap: "wrap" }}>
-            <Link href="/register" className="btn btn-primary">{t("listYourHarvest")}</Link>
-            <Link href="/marketplace" className="btn btn-outline">{t("marketplace")}</Link>
+          <div style={{ display: "flex", gap: 14, marginTop: 28, flexWrap: "wrap" }}>
+            <Link href="/register" className="btn btn-primary btn-lg">{t("listYourHarvest")}</Link>
+            <Link href="/marketplace" className="btn btn-lg" style={{ background: "rgba(255,255,255,0.14)", color: "#fff", border: "1.5px solid rgba(255,255,255,0.4)" }}>
+              {t("marketplace")}
+            </Link>
           </div>
           <div className="hero-stats">
             <div className="hero-stat"><b>30–46%</b><span>of the consumer price is typically taken by middlemen</span></div>
@@ -30,6 +42,18 @@ export default function HomePage() {
       </div>
 
       <div className="container page">
+        <div className="section-title"><h2>Fresh from the field</h2></div>
+        <div className="card-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 18 }}>
+          {GALLERY_CROPS.map((crop) => (
+            <Link key={crop} href={`/marketplace?crop=${encodeURIComponent(crop)}`} className="card" style={{ padding: 0, textAlign: "center" }}>
+              <CropImage cropName={crop} className="crop-image-flush" />
+              <div style={{ padding: "14px 12px", fontWeight: 700 }}>{crop}</div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="container" style={{ paddingBottom: 0 }}>
         <div className="section-title"><h2>The problem</h2></div>
         <div className="card-grid">
           <div className="card">
@@ -51,7 +75,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div style={{ marginTop: 40 }} className="card">
+        <div style={{ marginTop: 40, marginBottom: 40 }} className="card">
           <h3>Why not just use eNAM or an existing agri app?</h3>
           <p>
             eNAM still assumes a trip to a physical mandi, and platforms built for bulk B2B supply chains or

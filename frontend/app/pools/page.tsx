@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useLang } from "../lib/i18n";
+import CropImage from "../components/CropImage";
 
 interface Pool {
   id: string;
@@ -109,6 +110,7 @@ export default function PoolsPage() {
           const pct = Math.min(100, (Number(p.current_quantity_kg) / Number(p.target_quantity_kg)) * 100);
           return (
             <div key={p.id} className="card">
+              <CropImage cropName={p.crop_name} />
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <h3>{p.crop_name}</h3>
                 <span className="badge badge-amber">{p.mandi_zone}</span>

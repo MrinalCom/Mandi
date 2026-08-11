@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useCart } from "../lib/CartContext";
 import { useLang } from "../lib/i18n";
+import CropImage from "../components/CropImage";
 
 interface Listing {
   id: string;
@@ -19,24 +21,26 @@ interface Listing {
   farmer_name: string;
 }
 
-export default function MarketplacePage() {
+function MarketplaceContent() {
+  const searchParams = useSearchParams();
   const [listings, setListings] = useState<Listing[]>([]);
-  const [crop, setCrop] = useState("");
+  const [crop, setCrop] = useState(searchParams.get("crop") ?? "");
   const [loading, setLoading] = useState(true);
+  const [addedId, setAddedId] = useState<string | null>(null);
   const { user } = useAuth();
   const { addItem } = useCart();
   const { t } = useLang();
 
-  async function load() {
+  async function load(cropFilter: string) {
     setLoading(true);
-    const query = crop ? `?crop=${encodeURIComponent(crop)}` : "";
+    const query = cropFilter ? `?crop=${encodeURIComponent(cropFilter)}` : "";
     const res = await api.get<{ listings: Listing[] }>(`/api/listings${query}`);
     setListings(res.listings);
     setLoading(false);
   }
 
   useEffect(() => {
-    load();
+    load(crop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -47,7 +51,7 @@ export default function MarketplacePage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            load();
+            load(crop);
           }}
           style={{ display: "flex", gap: 8 }}
         >
@@ -62,6 +66,7 @@ export default function MarketplacePage() {
       <div className="card-grid">
         {listings.map((l) => (
           <div key={l.id} className="card">
+            <CropImage cropName={l.crop_name} />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
               <h3 style={{ marginBottom: 4 }}>{l.crop_name}{l.variety ? ` — ${l.variety}` : ""}</h3>
               <span className="badge badge-green">Grade {l.quality_grade}</span>
@@ -69,14 +74,14 @@ export default function MarketplacePage() {
             <p style={{ marginBottom: 6 }}>
               {l.farmer_name} · {[l.village, l.district, l.state].filter(Boolean).join(", ") || "Location not set"}
             </p>
-            <p style={{ fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
+            <p style={{ fontWeight: 700, color: "var(--ink)", marginBottom: 4, fontSize: 20 }}>
               ₹{l.price_per_kg}{t("perKg")}
             </p>
             <p className="field-hint" style={{ marginBottom: 14 }}>{t("quantityAvailable")}: {l.quantity_kg}kg</p>
             {user?.role === "buyer" && (
               <button
                 className="btn btn-primary btn-block"
-                onClick={() =>
+                onClick={() => {
                   addItem({
                     listingId: l.id,
                     cropName: l.crop_name,
@@ -84,15 +89,25 @@ export default function MarketplacePage() {
                     pricePerKg: Number(l.price_per_kg),
                     quantityKg: Math.min(10, Number(l.quantity_kg)),
                     maxQuantityKg: Number(l.quantity_kg),
-                  })
-                }
+                  });
+                  setAddedId(l.id);
+                  setTimeout(() => setAddedId((cur) => (cur === l.id ? null : cur)), 1500);
+                }}
               >
-                {t("addToCart")}
+                {addedId === l.id ? "Added ✓" : t("addToCart")}
               </button>
             )}
           </div>
         ))}
       </div>
     </div>
+  );
+}
+
+export default function MarketplacePage() {
+  return (
+    <Suspense fallback={<div className="container page"><p>Loading marketplace...</p></div>}>
+      <MarketplaceContent />
+    </Suspense>
   );
 }

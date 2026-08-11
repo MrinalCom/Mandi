@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { useLang } from "../lib/i18n";
+import CropImage from "../components/CropImage";
 
 interface MandiPrice {
   id: string;
@@ -67,7 +68,12 @@ export default function MandiPricesPage() {
           <tbody>
             {prices.map((p) => (
               <tr key={p.id}>
-                <td>{p.crop_name}</td>
+                <td>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <CropImage cropName={p.crop_name} className="crop-image-thumb-sm" />
+                    {p.crop_name}
+                  </div>
+                </td>
                 <td>{p.mandi_name}</td>
                 <td>{p.district}, {p.state}</td>
                 <td>₹{p.min_price}</td>

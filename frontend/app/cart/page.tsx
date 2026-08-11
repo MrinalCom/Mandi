@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCart } from "../lib/CartContext";
 import { useLang } from "../lib/i18n";
+import CropImage from "../components/CropImage";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, subtotal } = useCart();
@@ -20,14 +21,17 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container page" style={{ maxWidth: 720 }}>
+    <div className="container page" style={{ maxWidth: 820 }}>
       <h1>{t("cart")}</h1>
       <div className="card">
         {items.map((item) => (
-          <div key={item.listingId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderBottom: "1px solid var(--line)" }}>
-            <div>
-              <b>{item.cropName}</b>
-              <p style={{ margin: 0 }} className="field-hint">from {item.farmerName} · ₹{item.pricePerKg}/kg</p>
+          <div key={item.listingId} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 0", borderBottom: "1px solid var(--line)", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <CropImage cropName={item.cropName} className="crop-image-thumb" />
+              <div>
+                <b>{item.cropName}</b>
+                <p style={{ margin: 0 }} className="field-hint">from {item.farmerName} · ₹{item.pricePerKg}/kg</p>
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <input
