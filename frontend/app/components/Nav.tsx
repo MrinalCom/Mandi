@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "../lib/AuthContext";
 import { useLang } from "../lib/i18n";
 import { useCart } from "../lib/CartContext";
+import NotificationBell from "./NotificationBell";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -47,6 +48,7 @@ export default function Nav() {
           {user?.role === "buyer" && (
             <Link href="/cart" className="btn btn-outline btn-sm">{t("cart")} ({count})</Link>
           )}
+          <NotificationBell />
           {ready && !user && (
             <>
               <Link href="/login" className="btn btn-secondary btn-sm">{t("login")}</Link>

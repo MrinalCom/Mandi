@@ -19,6 +19,27 @@ mandi average.
 | ![Mandi price board](./docs/screenshots/mandi-prices.jpg) | ![Farmer dashboard](./docs/screenshots/dashboard.jpg) |
 | Mandi price board — min/max/modal price per crop, per mandi | Farmer dashboard — your price vs. that day's mandi average |
 
+## Features
+
+Beyond the core listing/order flow, six things address specific gaps from the problem
+statement:
+
+- **Trust & ratings** — a commission agent (arhtiya) used to vouch for both sides at the
+  mandi; without one, buyers need another way to judge a farmer. Buyers rate farmers
+  1–5 stars after delivery, and the average shows on every listing.
+- **Verified Farmer badge** — computed automatically from delivery history (3+ completed
+  orders), not self-declared, so it can't be gamed by a new account.
+- **In-app notifications** — a farmer gets pinged the moment a buyer orders, when a pool
+  they've joined fills, or when a review comes in; a buyer gets pinged as their order
+  moves through pickup and delivery. Pushed live over the existing Socket.IO connection.
+- **Location filters** — state/district dropdowns on the marketplace and price board,
+  populated from real listing data rather than a hardcoded list, so buyers can narrow to
+  their region.
+- **Real harvest photos** — farmers can attach an actual photo of their produce (resized
+  and compressed client-side, no object storage needed) instead of relying only on the
+  representative stock photo.
+- **Earnings export** — a farmer's sale history exports to CSV for their own records.
+
 ## Stack
 
 - **Backend:** Express + TypeScript, PostgreSQL, JWT auth, Socket.IO (live order status)
@@ -32,6 +53,14 @@ cp .env.example .env
 docker compose up -d postgres
 cd backend && npm install && npm run dev      # http://localhost:4000
 cd frontend && npm install && npm run dev     # http://localhost:3000
+```
+
+A fresh database gets the full schema from `backend/src/db/init.sql` automatically. If
+you're upgrading an existing database created before reviews/notifications were added,
+apply the migration once:
+
+```bash
+cd backend && npm run migrate
 ```
 
 Seed demo accounts and sample listings (run once, after the backend is up):

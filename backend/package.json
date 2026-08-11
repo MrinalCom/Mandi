@@ -7,6 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p .",
     "start": "node dist/index.js",
+    "migrate": "tsx src/scripts/migrate.ts",
     "seed": "tsx src/scripts/seed.ts",
     "fetch-prices": "tsx src/scripts/fetchMandiPrices.ts"
   },

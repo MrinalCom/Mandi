@@ -19,20 +19,26 @@ interface MandiPrice {
 
 export default function MandiPricesPage() {
   const [prices, setPrices] = useState<MandiPrice[]>([]);
+  const [states, setStates] = useState<string[]>([]);
   const [crop, setCrop] = useState("");
+  const [state, setState] = useState("");
   const [loading, setLoading] = useState(true);
   const { t } = useLang();
 
-  async function load() {
+  async function load(cropFilter: string, stateFilter: string) {
     setLoading(true);
-    const query = crop ? `?crop=${encodeURIComponent(crop)}` : "";
+    const params = new URLSearchParams();
+    if (cropFilter) params.set("crop", cropFilter);
+    if (stateFilter) params.set("state", stateFilter);
+    const query = params.toString() ? `?${params.toString()}` : "";
     const res = await api.get<{ prices: MandiPrice[] }>(`/api/mandi-prices${query}`);
     setPrices(res.prices);
     setLoading(false);
   }
 
   useEffect(() => {
-    load();
+    load(crop, state);
+    api.get<{ states: string[] }>("/api/mandi-prices/states").then((res) => setStates(res.states));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -40,8 +46,12 @@ export default function MandiPricesPage() {
     <div className="container page">
       <div className="section-title">
         <h1>{t("mandiPrices")}</h1>
-        <form onSubmit={(e) => { e.preventDefault(); load(); }} style={{ display: "flex", gap: 8 }}>
+        <form onSubmit={(e) => { e.preventDefault(); load(crop, state); }} className="filter-row">
           <input placeholder="Filter by crop" value={crop} onChange={(e) => setCrop(e.target.value)} />
+          <select value={state} onChange={(e) => setState(e.target.value)}>
+            <option value="">All states</option>
+            {states.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
           <button className="btn btn-secondary">Filter</button>
         </form>
       </div>

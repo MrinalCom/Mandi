@@ -11,5 +11,9 @@ export function registerOrderSocket(io: Server) {
     socket.on("order:unsubscribe", (orderId: string) => {
       if (typeof orderId === "string") socket.leave(`order:${orderId}`);
     });
+    // Notification bell — one room per logged-in user, joined right after login.
+    socket.on("user:subscribe", (userId: string) => {
+      if (typeof userId === "string") socket.join(`user:${userId}`);
+    });
   });
 }

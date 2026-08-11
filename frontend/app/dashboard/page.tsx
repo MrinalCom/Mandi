@@ -38,6 +38,28 @@ export default function DashboardPage() {
     }
   }, [ready, user, token, router]);
 
+  function exportCsv() {
+    if (!data) return;
+    const header = ["Date", "Crop", "Quantity (kg)", "Your price (₹/kg)", "Mandi avg (₹/kg)", "Vs mandi (%)", "Total (₹)"];
+    const rows = data.sales.map((s) => [
+      new Date(s.created_at).toLocaleDateString(),
+      s.crop_name,
+      s.quantity_kg,
+      s.unit_price,
+      s.mandi_price_per_kg?.toFixed(2) ?? "",
+      s.earned_vs_mandi_pct ?? "",
+      s.total_price,
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mandi-earnings-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   if (!data) return <div className="container page"><p>Loading dashboard...</p></div>;
 
   const chartData = data.sales
@@ -79,7 +101,12 @@ export default function DashboardPage() {
       )}
 
       <div className="card">
-        <h3>Sale history</h3>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+          <h3 style={{ marginBottom: 0 }}>Sale history</h3>
+          {data.sales.length > 0 && (
+            <button className="btn btn-secondary btn-sm" onClick={exportCsv}>⬇ Export CSV</button>
+          )}
+        </div>
         <table>
           <thead>
             <tr>

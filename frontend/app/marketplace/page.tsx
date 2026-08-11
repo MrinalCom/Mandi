@@ -1,12 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useCart } from "../lib/CartContext";
 import { useLang } from "../lib/i18n";
 import CropImage from "../components/CropImage";
+
+const VERIFIED_THRESHOLD = 3;
 
 interface Listing {
   id: string;
@@ -19,30 +21,53 @@ interface Listing {
   district: string | null;
   state: string | null;
   farmer_name: string;
+  photo_url: string | null;
+  farmer_rating: string | null;
+  farmer_rating_count: string;
+  farmer_completed_orders: string;
+}
+
+interface Location {
+  state: string;
+  district: string;
 }
 
 function MarketplaceContent() {
   const searchParams = useSearchParams();
   const [listings, setListings] = useState<Listing[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [crop, setCrop] = useState(searchParams.get("crop") ?? "");
+  const [state, setState] = useState("");
+  const [district, setDistrict] = useState("");
   const [loading, setLoading] = useState(true);
   const [addedId, setAddedId] = useState<string | null>(null);
   const { user } = useAuth();
   const { addItem } = useCart();
   const { t } = useLang();
 
-  async function load(cropFilter: string) {
+  async function load(cropFilter: string, stateFilter: string, districtFilter: string) {
     setLoading(true);
-    const query = cropFilter ? `?crop=${encodeURIComponent(cropFilter)}` : "";
+    const params = new URLSearchParams();
+    if (cropFilter) params.set("crop", cropFilter);
+    if (stateFilter) params.set("state", stateFilter);
+    if (districtFilter) params.set("district", districtFilter);
+    const query = params.toString() ? `?${params.toString()}` : "";
     const res = await api.get<{ listings: Listing[] }>(`/api/listings${query}`);
     setListings(res.listings);
     setLoading(false);
   }
 
   useEffect(() => {
-    load(crop);
+    load(crop, state, district);
+    api.get<{ locations: Location[] }>("/api/listings/locations").then((res) => setLocations(res.locations));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const states = useMemo(() => Array.from(new Set(locations.map((l) => l.state))).sort(), [locations]);
+  const districts = useMemo(
+    () => Array.from(new Set(locations.filter((l) => !state || l.state === state).map((l) => l.district))).sort(),
+    [locations, state]
+  );
 
   return (
     <div className="container page">
@@ -51,11 +76,19 @@ function MarketplaceContent() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            load(crop);
+            load(crop, state, district);
           }}
-          style={{ display: "flex", gap: 8 }}
+          className="filter-row"
         >
           <input placeholder="Search crop (e.g. Tomato)" value={crop} onChange={(e) => setCrop(e.target.value)} />
+          <select value={state} onChange={(e) => { setState(e.target.value); setDistrict(""); }}>
+            <option value="">All states</option>
+            {states.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <select value={district} onChange={(e) => setDistrict(e.target.value)}>
+            <option value="">All districts</option>
+            {districts.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
           <button className="btn btn-secondary">Search</button>
         </form>
       </div>
@@ -64,41 +97,59 @@ function MarketplaceContent() {
       {!loading && listings.length === 0 && <div className="empty-state">No active listings match that search.</div>}
 
       <div className="card-grid">
-        {listings.map((l) => (
-          <div key={l.id} className="card">
-            <CropImage cropName={l.crop_name} />
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
-              <h3 style={{ marginBottom: 4 }}>{l.crop_name}{l.variety ? ` — ${l.variety}` : ""}</h3>
-              <span className="badge badge-green">Grade {l.quality_grade}</span>
+        {listings.map((l) => {
+          const rating = l.farmer_rating ? Number(l.farmer_rating) : null;
+          const isVerified = Number(l.farmer_completed_orders) >= VERIFIED_THRESHOLD;
+          return (
+            <div key={l.id} className="card">
+              {l.photo_url ? (
+                <div className="crop-image">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={l.photo_url} alt={l.crop_name} loading="lazy" />
+                </div>
+              ) : (
+                <CropImage cropName={l.crop_name} />
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                <h3 style={{ marginBottom: 4 }}>{l.crop_name}{l.variety ? ` — ${l.variety}` : ""}</h3>
+                <span className="badge badge-green">Grade {l.quality_grade}</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                <span>{l.farmer_name}</span>
+                {isVerified && <span className="badge badge-amber">✓ Verified</span>}
+                {rating !== null && (
+                  <span className="rating-pill">★ {rating.toFixed(1)} <span className="field-hint">({l.farmer_rating_count})</span></span>
+                )}
+              </div>
+              <p style={{ marginBottom: 6 }}>
+                {[l.village, l.district, l.state].filter(Boolean).join(", ") || "Location not set"}
+              </p>
+              <p style={{ fontWeight: 700, color: "var(--ink)", marginBottom: 4, fontSize: 20 }}>
+                ₹{l.price_per_kg}{t("perKg")}
+              </p>
+              <p className="field-hint" style={{ marginBottom: 14 }}>{t("quantityAvailable")}: {l.quantity_kg}kg</p>
+              {user?.role === "buyer" && (
+                <button
+                  className="btn btn-primary btn-block"
+                  onClick={() => {
+                    addItem({
+                      listingId: l.id,
+                      cropName: l.crop_name,
+                      farmerName: l.farmer_name,
+                      pricePerKg: Number(l.price_per_kg),
+                      quantityKg: Math.min(10, Number(l.quantity_kg)),
+                      maxQuantityKg: Number(l.quantity_kg),
+                    });
+                    setAddedId(l.id);
+                    setTimeout(() => setAddedId((cur) => (cur === l.id ? null : cur)), 1500);
+                  }}
+                >
+                  {addedId === l.id ? "Added ✓" : t("addToCart")}
+                </button>
+              )}
             </div>
-            <p style={{ marginBottom: 6 }}>
-              {l.farmer_name} · {[l.village, l.district, l.state].filter(Boolean).join(", ") || "Location not set"}
-            </p>
-            <p style={{ fontWeight: 700, color: "var(--ink)", marginBottom: 4, fontSize: 20 }}>
-              ₹{l.price_per_kg}{t("perKg")}
-            </p>
-            <p className="field-hint" style={{ marginBottom: 14 }}>{t("quantityAvailable")}: {l.quantity_kg}kg</p>
-            {user?.role === "buyer" && (
-              <button
-                className="btn btn-primary btn-block"
-                onClick={() => {
-                  addItem({
-                    listingId: l.id,
-                    cropName: l.crop_name,
-                    farmerName: l.farmer_name,
-                    pricePerKg: Number(l.price_per_kg),
-                    quantityKg: Math.min(10, Number(l.quantity_kg)),
-                    maxQuantityKg: Number(l.quantity_kg),
-                  });
-                  setAddedId(l.id);
-                  setTimeout(() => setAddedId((cur) => (cur === l.id ? null : cur)), 1500);
-                }}
-              >
-                {addedId === l.id ? "Added ✓" : t("addToCart")}
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -26,7 +26,11 @@ listingsRouter.get("/", asyncHandler(async (req, res) => {
   }
 
   const result = await pool.query(
-    `SELECT l.*, u.name AS farmer_name, u.village AS farmer_village
+    `SELECT l.*, u.name AS farmer_name, u.village AS farmer_village,
+            (SELECT ROUND(AVG(r.rating)::numeric, 1) FROM reviews r WHERE r.farmer_id = l.farmer_id) AS farmer_rating,
+            (SELECT COUNT(*) FROM reviews r WHERE r.farmer_id = l.farmer_id) AS farmer_rating_count,
+            (SELECT COUNT(*) FROM orders o JOIN listings l2 ON l2.id = o.listing_id
+              WHERE l2.farmer_id = l.farmer_id AND o.status IN ('delivered', 'paid_out')) AS farmer_completed_orders
      FROM listings l
      JOIN users u ON u.id = l.farmer_id
      WHERE ${conditions.join(" AND ")}
@@ -34,6 +38,15 @@ listingsRouter.get("/", asyncHandler(async (req, res) => {
     values
   );
   res.json({ listings: result.rows });
+}));
+
+// Distinct state/district pairs among active listings — powers the
+// marketplace's location filter dropdowns without hardcoding a state list.
+listingsRouter.get("/locations", asyncHandler(async (_req, res) => {
+  const result = await pool.query(
+    `SELECT DISTINCT state, district FROM listings WHERE status = 'active' AND state IS NOT NULL ORDER BY state, district`
+  );
+  res.json({ locations: result.rows });
 }));
 
 listingsRouter.get("/mine", requireAuth, requireRole("farmer"), asyncHandler<AuthedRequest>(async (req, res) => {
@@ -61,7 +74,8 @@ const createSchema = z.object({
   pricePerKg: z.coerce.number().positive(),
   qualityGrade: z.enum(["A", "B", "C"]).default("A"),
   harvestDate: z.string().optional(),
-  photoUrl: z.string().url().optional(),
+  // Accepts either a real URL or a client-resized data: URI from the photo upload widget.
+  photoUrl: z.string().max(400000).optional(),
   village: z.string().optional(),
   district: z.string().optional(),
   state: z.string().optional(),

@@ -42,6 +42,11 @@ mandiPricesRouter.get("/crops", asyncHandler(async (_req, res) => {
   res.json({ crops: result.rows.map((r) => r.crop_name) });
 }));
 
+mandiPricesRouter.get("/states", asyncHandler(async (_req, res) => {
+  const result = await pool.query(`SELECT DISTINCT state FROM mandi_prices ORDER BY state`);
+  res.json({ states: result.rows.map((r) => r.state) });
+}));
+
 // Recent trend for one crop, used on the farmer dashboard to compare their
 // sale price against what the mandi was actually paying that week.
 mandiPricesRouter.get("/trend", asyncHandler(async (req, res) => {

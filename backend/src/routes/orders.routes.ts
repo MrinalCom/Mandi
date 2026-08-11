@@ -4,6 +4,7 @@ import type { Server } from "socket.io";
 import { pool } from "../config/db.js";
 import { requireAuth, requireRole, AuthedRequest } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { notify } from "../services/notifications.js";
 
 export const ordersRouter = Router();
 
@@ -21,6 +22,8 @@ ordersRouter.post("/", requireAuth, requireRole("buyer"), asyncHandler<AuthedReq
   const { listingId, quantityKg, pickupNote } = parsed.data;
 
   const client = await pool.connect();
+  let order;
+  let listing;
   try {
     await client.query("BEGIN");
 
@@ -29,7 +32,7 @@ ordersRouter.post("/", requireAuth, requireRole("buyer"), asyncHandler<AuthedReq
       await client.query("ROLLBACK");
       return res.status(404).json({ error: "Listing not found" });
     }
-    const listing = listingRow.rows[0];
+    listing = listingRow.rows[0];
     if (listing.status !== "active") {
       await client.query("ROLLBACK");
       return res.status(409).json({ error: "Listing is no longer available" });
@@ -47,7 +50,7 @@ ordersRouter.post("/", requireAuth, requireRole("buyer"), asyncHandler<AuthedReq
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [req.user!.id, listingId, quantityKg, unitPrice, totalPrice, pickupNote ?? null]
     );
-    const order = orderResult.rows[0];
+    order = orderResult.rows[0];
 
     await client.query(
       `INSERT INTO order_events (order_id, status, note) VALUES ($1, 'pending', 'Order placed')`,
@@ -62,13 +65,23 @@ ordersRouter.post("/", requireAuth, requireRole("buyer"), asyncHandler<AuthedReq
     }
 
     await client.query("COMMIT");
-    res.status(201).json({ order });
   } catch (err) {
     await client.query("ROLLBACK");
     throw err;
   } finally {
     client.release();
   }
+
+  const io = req.app.get("io") as Server;
+  await notify(
+    io,
+    listing.farmer_id,
+    "new_order",
+    `New order: ${quantityKg}kg of ${listing.crop_name} at ₹${listing.price_per_kg}/kg`,
+    "/orders"
+  );
+
+  res.status(201).json({ order });
 }));
 
 ordersRouter.get("/mine", requireAuth, asyncHandler<AuthedRequest>(async (req, res) => {
@@ -81,7 +94,8 @@ ordersRouter.get("/mine", requireAuth, asyncHandler<AuthedRequest>(async (req, r
          JOIN users u ON u.id = o.buyer_id
          WHERE l.farmer_id = $1
          ORDER BY o.created_at DESC`
-      : `SELECT o.*, l.crop_name, u.name AS farmer_name
+      : `SELECT o.*, l.crop_name, u.name AS farmer_name,
+                EXISTS(SELECT 1 FROM reviews r WHERE r.order_id = o.id) AS has_review
          FROM orders o
          JOIN listings l ON l.id = o.listing_id
          JOIN users u ON u.id = l.farmer_id
@@ -105,12 +119,20 @@ const statusSchema = z.object({
   note: z.string().optional(),
 });
 
+const STATUS_MESSAGE: Record<string, string> = {
+  confirmed: "Your order was confirmed by the farmer",
+  picked_up: "Your order has been picked up",
+  delivered: "Order marked delivered — payment released",
+  paid_out: "Payment has been settled",
+  cancelled: "An order was cancelled",
+};
+
 ordersRouter.patch("/:id/status", requireAuth, asyncHandler<AuthedRequest>(async (req, res) => {
   const parsed = statusSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
 
   const orderRow = await pool.query(
-    `SELECT o.*, l.farmer_id FROM orders o JOIN listings l ON l.id = o.listing_id WHERE o.id = $1`,
+    `SELECT o.*, l.farmer_id, l.crop_name FROM orders o JOIN listings l ON l.id = o.listing_id WHERE o.id = $1`,
     [req.params.id]
   );
   if (!orderRow.rowCount) return res.status(404).json({ error: "Order not found" });
@@ -134,5 +156,52 @@ ordersRouter.patch("/:id/status", requireAuth, asyncHandler<AuthedRequest>(async
   const io = req.app.get("io") as Server;
   io.to(`order:${req.params.id}`).emit("order:status", { orderId: req.params.id, status: parsed.data.status });
 
+  const otherParty = req.user!.id === order.buyer_id ? order.farmer_id : order.buyer_id;
+  await notify(
+    io,
+    otherParty,
+    "order_status",
+    `${order.crop_name}: ${STATUS_MESSAGE[parsed.data.status] ?? parsed.data.status}`,
+    "/orders"
+  );
+
   res.json({ order: updated.rows[0] });
+}));
+
+const reviewSchema = z.object({
+  rating: z.coerce.number().int().min(1).max(5),
+  comment: z.string().max(500).optional(),
+});
+
+// Buyer rates the farmer after delivery — the trust signal that used to live
+// with the commission agent who vouched for both sides at the mandi.
+ordersRouter.post("/:id/review", requireAuth, requireRole("buyer"), asyncHandler<AuthedRequest>(async (req, res) => {
+  const parsed = reviewSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  const orderRow = await pool.query(
+    `SELECT o.*, l.farmer_id, l.crop_name FROM orders o JOIN listings l ON l.id = o.listing_id WHERE o.id = $1`,
+    [req.params.id]
+  );
+  if (!orderRow.rowCount) return res.status(404).json({ error: "Order not found" });
+  const order = orderRow.rows[0];
+
+  if (order.buyer_id !== req.user!.id) return res.status(403).json({ error: "Not your order" });
+  if (!["delivered", "paid_out"].includes(order.status)) {
+    return res.status(409).json({ error: "You can only review an order after it's delivered" });
+  }
+
+  const existing = await pool.query("SELECT id FROM reviews WHERE order_id = $1", [req.params.id]);
+  if (existing.rowCount) return res.status(409).json({ error: "You already reviewed this order" });
+
+  const result = await pool.query(
+    `INSERT INTO reviews (order_id, farmer_id, buyer_id, rating, comment)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [req.params.id, order.farmer_id, req.user!.id, parsed.data.rating, parsed.data.comment ?? null]
+  );
+
+  const io = req.app.get("io") as Server;
+  await notify(io, order.farmer_id, "review", `You got a ${parsed.data.rating}-star review for ${order.crop_name}`, "/listings/mine");
+
+  res.status(201).json({ review: result.rows[0] });
 }));

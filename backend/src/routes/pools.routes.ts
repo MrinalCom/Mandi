@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { z } from "zod";
+import type { Server } from "socket.io";
 import { pool } from "../config/db.js";
 import { requireAuth, requireRole, AuthedRequest } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { notify } from "../services/notifications.js";
 
 export const poolsRouter = Router();
 
@@ -102,6 +104,24 @@ poolsRouter.post("/:id/join", requireAuth, requireRole("farmer"), asyncHandler<A
     );
 
     await client.query("COMMIT");
+
+    if (newStatus === "filled") {
+      const contributors = await pool.query(
+        `SELECT DISTINCT farmer_id FROM pool_contributions WHERE pool_group_id = $1`,
+        [req.params.id]
+      );
+      const io = req.app.get("io") as Server;
+      for (const row of contributors.rows) {
+        await notify(
+          io,
+          row.farmer_id,
+          "pool_filled",
+          `Your ${current.crop_name} pool in ${current.mandi_zone} is full and ready for a buyer`,
+          "/pools"
+        );
+      }
+    }
+
     res.json({ pool: updated.rows[0] });
   } catch (err) {
     await client.query("ROLLBACK");

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/AuthContext";
+import { resizeImageToDataUrl } from "../../lib/imageResize";
 
 interface MandiPrice {
   mandi_name: string;
@@ -20,6 +21,8 @@ export default function NewListingPage() {
     pricePerKg: "",
     qualityGrade: "A",
   });
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [mandiHint, setMandiHint] = useState<MandiPrice[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -38,12 +41,24 @@ export default function NewListingPage() {
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  async function onPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError(null);
+    try {
+      const dataUrl = await resizeImageToDataUrl(file);
+      setPhotoUrl(dataUrl);
+    } catch {
+      setPhotoError("Couldn't read that photo — try a different file.");
+    }
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await api.post("/api/listings", form, token);
+      await api.post("/api/listings", { ...form, photoUrl: photoUrl ?? undefined }, token);
       router.push("/listings/mine");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong");
@@ -56,6 +71,19 @@ export default function NewListingPage() {
     <div className="container page" style={{ maxWidth: 520 }}>
       <h1>List your harvest</h1>
       <form onSubmit={onSubmit} className="card">
+        <div className="field">
+          <label>Photo (optional — a real photo builds buyer trust)</label>
+          {photoUrl && (
+            <div className="photo-upload-preview">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={photoUrl} alt="Harvest preview" />
+            </div>
+          )}
+          <input type="file" accept="image/*" capture="environment" onChange={onPhotoChange} />
+          {photoError && <p className="error-text">{photoError}</p>}
+          <p className="field-hint">No photo? We'll show a representative photo for the crop instead.</p>
+        </div>
+
         <div className="field">
           <label>Crop name</label>
           <input required value={form.cropName} onChange={(e) => update("cropName", e.target.value)} onBlur={checkMandiPrice} placeholder="e.g. Tomato" />
