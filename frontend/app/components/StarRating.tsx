@@ -24,6 +24,7 @@ export default function StarRating({ value, onChange, readonly }: Props) {
           onMouseLeave={() => !readonly && setHover(null)}
           onClick={() => !readonly && onChange?.(n)}
           aria-label={`${n} star`}
+          title={`${n} star${n > 1 ? "s" : ""}`}
         >
           ★
         </button>

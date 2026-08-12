@@ -104,7 +104,7 @@ export default function DashboardPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
           <h3 style={{ marginBottom: 0 }}>Sale history</h3>
           {data.sales.length > 0 && (
-            <button className="btn btn-secondary btn-sm" onClick={exportCsv}>⬇ Export CSV</button>
+            <button className="btn btn-secondary btn-sm" onClick={exportCsv} title="Download your sale history as a CSV file">⬇ Export CSV</button>
           )}
         </div>
         <table>

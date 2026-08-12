@@ -55,7 +55,7 @@ export default function RegisterPage() {
         </div>
         <div className="field">
           <label>Phone number</label>
-          <input required value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="98XXXXXXXX" />
+          <input required maxLength={10} value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="98XXXXXXXX" />
         </div>
         <div className="field">
           <label>Password</label>

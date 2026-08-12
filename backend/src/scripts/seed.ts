@@ -73,7 +73,7 @@ async function main() {
     );
   }
 
-  console.log("Seed complete. Demo accounts (password: %s):", DEMO_PASSWORD);
+  console.log("Seed complete — demo accounts (password: %s):", DEMO_PASSWORD);
   console.log("  Farmer: 9800000001 (Ramesh Yadav)");
   console.log("  Farmer: 9800000002 (Sunita Devi)");
   console.log("  Buyer:  9800000003 (Fresh Basket Retail)");

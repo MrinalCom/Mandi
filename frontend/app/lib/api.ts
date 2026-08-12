@@ -20,6 +20,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
   if (res.status === 204) return undefined as T;
 
+  // Backend error responses are JSON, but a 5xx from a proxy/timeout can come
+  // back as plain text — fall back to an empty object rather than throwing here.
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const message = typeof data.error === "string" ? data.error : JSON.stringify(data.error) || res.statusText;

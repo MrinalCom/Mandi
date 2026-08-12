@@ -13,8 +13,8 @@ listingsRouter.get("/", asyncHandler(async (req, res) => {
   const values: unknown[] = [];
 
   if (crop) {
-    values.push(`%${crop}%`);
-    conditions.push(`l.crop_name ILIKE $${values.length}`);
+    // Trim whitespace so "Tomato " and "Tomato" match the same listings.
+    conditions.push(`l.crop_name ILIKE '%${String(crop).trim()}%'`);
   }
   if (state) {
     values.push(state);

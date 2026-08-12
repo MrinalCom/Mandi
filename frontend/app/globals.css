@@ -130,6 +130,7 @@ p { margin: 0 0 1em; line-height: 1.6; color: var(--ink-soft); }
   transition: transform 0.05s ease, opacity 0.15s ease, background 0.15s ease;
 }
 .btn:active { transform: scale(0.98); }
+.btn:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn-primary { background: var(--green); color: #fff; }
 .btn-primary:hover { background: var(--green-dark); }

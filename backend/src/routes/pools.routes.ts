@@ -97,6 +97,8 @@ poolsRouter.post("/:id/join", requireAuth, requireRole("farmer"), asyncHandler<A
     }
 
     const newTotal = Number(current.current_quantity_kg) + quantityKg;
+    // Allow slight overshoot past the target rather than rejecting a
+    // contribution that would tip it over — farmers round to whole bags/crates.
     const newStatus = newTotal >= Number(current.target_quantity_kg) ? "filled" : "open";
     const updated = await client.query(
       `UPDATE pool_groups SET current_quantity_kg = $1, status = $2 WHERE id = $3 RETURNING *`,
