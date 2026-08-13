@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
 import { useCart } from "../lib/CartContext";
@@ -12,6 +13,7 @@ const VERIFIED_THRESHOLD = 3;
 
 interface Listing {
   id: string;
+  farmer_id: string;
   crop_name: string;
   variety: string | null;
   quantity_kg: string;
@@ -41,7 +43,8 @@ function MarketplaceContent() {
   const [district, setDistrict] = useState("");
   const [loading, setLoading] = useState(true);
   const [addedId, setAddedId] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [wishlisted, setWishlisted] = useState<Set<string>>(new Set());
+  const { user, token } = useAuth();
   const { addItem } = useCart();
   const { t } = useLang();
 
@@ -62,6 +65,28 @@ function MarketplaceContent() {
     api.get<{ locations: Location[] }>("/api/listings/locations").then((res) => setLocations(res.locations));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (user?.role === "buyer" && token) {
+      api.get<{ items: { listing_id: string }[] }>("/api/wishlist", token).then((res) => {
+        setWishlisted(new Set(res.items.map((i) => i.listing_id)));
+      });
+    }
+  }, [user, token]);
+
+  async function toggleWishlist(listingId: string) {
+    const isSaved = wishlisted.has(listingId);
+    setWishlisted((prev) => {
+      const next = new Set(prev);
+      isSaved ? next.delete(listingId) : next.add(listingId);
+      return next;
+    });
+    if (isSaved) {
+      await api.delete(`/api/wishlist/${listingId}`, token);
+    } else {
+      await api.post("/api/wishlist", { listingId }, token);
+    }
+  }
 
   const states = useMemo(() => Array.from(new Set(locations.map((l) => l.state))).sort(), [locations]);
   const districts = useMemo(
@@ -100,8 +125,23 @@ function MarketplaceContent() {
         {listings.map((l) => {
           const rating = l.farmer_rating ? Number(l.farmer_rating) : null;
           const isVerified = Number(l.farmer_completed_orders) >= VERIFIED_THRESHOLD;
+          const isSaved = wishlisted.has(l.id);
           return (
-            <div key={l.id} className="card">
+            <div key={l.id} className="card" style={{ position: "relative" }}>
+              {user?.role === "buyer" && (
+                <button
+                  onClick={() => toggleWishlist(l.id)}
+                  aria-label={isSaved ? "Remove from wishlist" : "Save to wishlist"}
+                  title={isSaved ? "Remove from wishlist" : "Save to wishlist"}
+                  style={{
+                    position: "absolute", top: 14, right: 14, zIndex: 2,
+                    background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%",
+                    width: 34, height: 34, cursor: "pointer", fontSize: 16,
+                  }}
+                >
+                  {isSaved ? "❤️" : "🤍"}
+                </button>
+              )}
               {l.photo_url ? (
                 <div className="crop-image">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -115,7 +155,7 @@ function MarketplaceContent() {
                 <span className="badge badge-green">Grade {l.quality_grade}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                <span>{l.farmer_name}</span>
+                <Link href={`/farmers/${l.farmer_id}`} style={{ fontWeight: 600, textDecoration: "underline" }}>{l.farmer_name}</Link>
                 {isVerified && <span className="badge badge-amber">✓ Verified</span>}
                 {rating !== null && (
                   <span className="rating-pill">★ {rating.toFixed(1)} <span className="field-hint">({l.farmer_rating_count})</span></span>

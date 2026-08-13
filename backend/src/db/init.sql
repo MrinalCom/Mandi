@@ -130,6 +130,24 @@ CREATE TABLE notifications (
 );
 CREATE INDEX idx_notifications_user ON notifications (user_id, read, created_at DESC);
 
+-- Lets a farmer or buyer "watch" a crop and get notified when its mandi
+-- price moves sharply, instead of having to keep re-checking the price board.
+CREATE TABLE price_watches (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  crop_name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, crop_name)
+);
+
+CREATE TABLE wishlist_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  listing_id UUID NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, listing_id)
+);
+
 -- Seeded reference prices (last 4 days, a handful of major mandis/crops) so the
 -- price board and farmer dashboard have real-shaped data out of the box.
 INSERT INTO mandi_prices (crop_name, mandi_name, district, state, min_price, max_price, modal_price, price_date) VALUES

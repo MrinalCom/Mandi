@@ -26,6 +26,7 @@ export default function Nav() {
         { href: "/marketplace", label: t("marketplace") },
         { href: "/mandi-prices", label: t("mandiPrices") },
         { href: "/pools", label: t("pools") },
+        { href: "/wishlist", label: "Wishlist" },
         { href: "/orders", label: t("orders") },
       ];
 

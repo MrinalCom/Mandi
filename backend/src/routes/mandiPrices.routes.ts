@@ -1,5 +1,7 @@
 import { Router } from "express";
+import { z } from "zod";
 import { pool } from "../config/db.js";
+import { requireAuth, AuthedRequest } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const mandiPricesRouter = Router();
@@ -62,4 +64,36 @@ mandiPricesRouter.get("/trend", asyncHandler(async (req, res) => {
     [crop]
   );
   res.json({ trend: result.rows });
+}));
+
+// Crop watchlist — lets a user get notified when a crop's price moves
+// sharply instead of having to keep re-checking the price board.
+mandiPricesRouter.get("/watch", requireAuth, asyncHandler<AuthedRequest>(async (req, res) => {
+  const result = await pool.query(
+    `SELECT crop_name, created_at FROM price_watches WHERE user_id = $1 ORDER BY crop_name`,
+    [req.user!.id]
+  );
+  res.json({ watches: result.rows });
+}));
+
+const watchSchema = z.object({ cropName: z.string().min(1) });
+
+mandiPricesRouter.post("/watch", requireAuth, asyncHandler<AuthedRequest>(async (req, res) => {
+  const parsed = watchSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+
+  await pool.query(
+    `INSERT INTO price_watches (user_id, crop_name) VALUES ($1, $2)
+     ON CONFLICT (user_id, crop_name) DO NOTHING`,
+    [req.user!.id, parsed.data.cropName]
+  );
+  res.status(201).json({ ok: true });
+}));
+
+mandiPricesRouter.delete("/watch/:cropName", requireAuth, asyncHandler<AuthedRequest>(async (req, res) => {
+  await pool.query(
+    `DELETE FROM price_watches WHERE user_id = $1 AND crop_name = $2`,
+    [req.user!.id, req.params.cropName]
+  );
+  res.status(204).send();
 }));

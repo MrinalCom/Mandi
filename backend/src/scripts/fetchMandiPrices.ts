@@ -107,7 +107,10 @@ function generateSynthetic(): PriceRow[] {
 
       for (let d = DAYS_OF_HISTORY - 1; d >= 0; d--) {
         // Random walk so consecutive days look like real market drift, not noise.
-        const drift = (Math.random() - 0.5) * 0.06;
+        // Perishables (tomato, onion) genuinely swing double digits day-to-day
+        // around weather/supply shocks, so ±10% keeps the price-alert threshold
+        // below meaningfully reachable instead of mathematically unreachable.
+        const drift = (Math.random() - 0.5) * 0.2;
         modal = Math.max(base * 0.5, modal * (1 + drift));
         const spread = modal * (0.12 + Math.random() * 0.1);
 
@@ -161,6 +164,51 @@ async function insertRows(rows: PriceRow[]) {
   }
 }
 
+const PRICE_ALERT_THRESHOLD_PCT = 8;
+
+// Compares each crop's most recent day against the day before it (averaged
+// across mandis) and notifies anyone watching that crop if it moved sharply —
+// the alert a farmer would otherwise only get by checking the price board
+// themselves every morning.
+async function notifyPriceWatchers(rows: PriceRow[]) {
+  const byCrop = new Map<string, Map<string, number[]>>();
+  for (const r of rows) {
+    if (!byCrop.has(r.crop_name)) byCrop.set(r.crop_name, new Map());
+    const byDate = byCrop.get(r.crop_name)!;
+    if (!byDate.has(r.price_date)) byDate.set(r.price_date, []);
+    byDate.get(r.price_date)!.push(r.modal_price);
+  }
+
+  let alerted = 0;
+  for (const [cropName, byDate] of byCrop) {
+    const dates = Array.from(byDate.keys()).sort();
+    if (dates.length < 2) continue;
+    const [prevDate, lastDate] = dates.slice(-2);
+    const avg = (nums: number[]) => nums.reduce((a, b) => a + b, 0) / nums.length;
+    const prevAvg = avg(byDate.get(prevDate)!);
+    const lastAvg = avg(byDate.get(lastDate)!);
+    const pctChange = ((lastAvg - prevAvg) / prevAvg) * 100;
+    if (Math.abs(pctChange) < PRICE_ALERT_THRESHOLD_PCT) continue;
+
+    const watchers = await pool.query(
+      `SELECT user_id FROM price_watches WHERE crop_name ILIKE $1`,
+      [cropName]
+    );
+    if (!watchers.rowCount) continue;
+
+    const direction = pctChange > 0 ? "up" : "down";
+    const message = `${cropName} mandi price moved ${direction} ${Math.abs(pctChange).toFixed(1)}% — now ₹${(lastAvg / 100).toFixed(2)}/kg`;
+    for (const w of watchers.rows) {
+      await pool.query(
+        `INSERT INTO notifications (user_id, type, message, link) VALUES ($1, 'price_alert', $2, '/mandi-prices')`,
+        [w.user_id, message]
+      );
+      alerted++;
+    }
+  }
+  if (alerted) console.log(`Sent ${alerted} price alert notification(s).`);
+}
+
 async function main() {
   const apiKey = process.env.AGMARKNET_API_KEY;
   let rows: PriceRow[] = [];
@@ -181,6 +229,7 @@ async function main() {
 
   await insertRows(rows);
   console.log(`Loaded ${rows.length} mandi price rows from ${source}.`);
+  await notifyPriceWatchers(rows);
   await pool.end();
 }
 

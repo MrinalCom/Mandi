@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "../lib/api";
 import { useAuth } from "../lib/AuthContext";
+import { useCart } from "../lib/CartContext";
 import { getSocket } from "../lib/socket";
 import StarRating from "../components/StarRating";
 
 interface Order {
   id: string;
+  listing_id: string;
   crop_name: string;
   quantity_kg: string;
   unit_price: string;
@@ -21,6 +23,15 @@ interface Order {
   has_review?: boolean;
 }
 
+interface ListingDetail {
+  id: string;
+  crop_name: string;
+  farmer_name: string;
+  price_per_kg: string;
+  quantity_kg: string;
+  status: string;
+}
+
 const STEPS = ["pending", "confirmed", "picked_up", "delivered", "paid_out"];
 const statusLabel: Record<string, string> = {
   pending: "Order placed",
@@ -30,6 +41,13 @@ const statusLabel: Record<string, string> = {
   paid_out: "Payment settled",
   cancelled: "Cancelled",
 };
+
+const FILTERS: { key: string; label: string; statuses: string[] | null }[] = [
+  { key: "all", label: "All", statuses: null },
+  { key: "active", label: "In progress", statuses: ["pending", "confirmed", "picked_up"] },
+  { key: "done", label: "Completed", statuses: ["delivered", "paid_out"] },
+  { key: "cancelled", label: "Cancelled", statuses: ["cancelled"] },
+];
 
 function ReviewForm({ orderId, token, onDone }: { orderId: string; token: string | null; onDone: () => void }) {
   const [rating, setRating] = useState(5);
@@ -72,9 +90,12 @@ function ReviewForm({ orderId, token, onDone }: { orderId: string; token: string
 export default function OrdersPage() {
   const router = useRouter();
   const { user, token, ready } = useAuth();
+  const { addItem } = useCart();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState("all");
+  const [reorderState, setReorderState] = useState<Record<string, "loading" | "added" | string>>({});
 
   async function load() {
     if (!token) return;
@@ -110,6 +131,29 @@ export default function OrdersPage() {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)));
   }
 
+  async function buyAgain(o: Order) {
+    setReorderState((prev) => ({ ...prev, [o.id]: "loading" }));
+    try {
+      const res = await api.get<{ listing: ListingDetail }>(`/api/listings/${o.listing_id}`);
+      const listing = res.listing;
+      if (listing.status !== "active" || Number(listing.quantity_kg) <= 0) {
+        setReorderState((prev) => ({ ...prev, [o.id]: "This farmer doesn't have an active listing for this crop right now." }));
+        return;
+      }
+      addItem({
+        listingId: listing.id,
+        cropName: listing.crop_name,
+        farmerName: listing.farmer_name,
+        pricePerKg: Number(listing.price_per_kg),
+        quantityKg: Math.min(Number(o.quantity_kg), Number(listing.quantity_kg)),
+        maxQuantityKg: Number(listing.quantity_kg),
+      });
+      setReorderState((prev) => ({ ...prev, [o.id]: "added" }));
+    } catch {
+      setReorderState((prev) => ({ ...prev, [o.id]: "That listing is no longer available." }));
+    }
+  }
+
   function nextAction(o: Order) {
     if (!user) return null;
     if (o.status === "cancelled" || o.status === "paid_out") return null;
@@ -124,17 +168,38 @@ export default function OrdersPage() {
     return null;
   }
 
+  const visibleOrders = orders.filter((o) => {
+    const f = FILTERS.find((x) => x.key === filter);
+    return !f?.statuses || f.statuses.includes(o.status);
+  });
+
   return (
     <div className="container page">
-      <h1>Orders</h1>
+      <div className="section-title">
+        <h1>Orders</h1>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={`btn btn-sm ${filter === f.key ? "btn-primary" : "btn-secondary"}`}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading && <p>Loading orders...</p>}
-      {!loading && orders.length === 0 && <div className="empty-state">No orders yet.</div>}
+      {!loading && visibleOrders.length === 0 && <div className="empty-state">No orders in this view.</div>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {orders.map((o) => {
+        {visibleOrders.map((o) => {
           const action = nextAction(o);
           const currentIdx = STEPS.indexOf(o.status);
           const canReview = user?.role === "buyer" && ["delivered", "paid_out"].includes(o.status) && !o.has_review;
+          const canReorder = user?.role === "buyer" && ["delivered", "paid_out"].includes(o.status);
+          const reorderStatus = reorderState[o.id];
           return (
             <div key={o.id} className="card">
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
@@ -158,10 +223,21 @@ export default function OrdersPage() {
                 </div>
               )}
 
-              {action && (
-                <button className="btn btn-primary btn-sm" onClick={() => advance(o.id, action.status)} style={{ marginTop: 8 }}>
-                  {action.label}
-                </button>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 8 }}>
+                {action && (
+                  <button className="btn btn-primary btn-sm" onClick={() => advance(o.id, action.status)}>
+                    {action.label}
+                  </button>
+                )}
+                {canReorder && reorderStatus !== "added" && (
+                  <button className="btn btn-secondary btn-sm" onClick={() => buyAgain(o)} disabled={reorderStatus === "loading"}>
+                    {reorderStatus === "loading" ? "Checking..." : "Buy again"}
+                  </button>
+                )}
+                {reorderStatus === "added" && <span className="badge badge-green">Added to cart ✓</span>}
+              </div>
+              {reorderStatus && reorderStatus !== "loading" && reorderStatus !== "added" && (
+                <p className="error-text">{reorderStatus}</p>
               )}
 
               {o.has_review && <p className="field-hint" style={{ marginTop: 10 }}>✓ You reviewed this order</p>}

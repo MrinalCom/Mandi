@@ -9,7 +9,9 @@ import { mandiPricesRouter } from "./routes/mandiPrices.routes.js";
 import { poolsRouter } from "./routes/pools.routes.js";
 import { ordersRouter } from "./routes/orders.routes.js";
 import { farmerRouter } from "./routes/farmer.routes.js";
+import { farmersRouter } from "./routes/farmers.routes.js";
 import { notificationsRouter } from "./routes/notifications.routes.js";
+import { wishlistRouter } from "./routes/wishlist.routes.js";
 import { registerOrderSocket } from "./sockets/orderSocket.js";
 
 const app = express();
@@ -34,7 +36,9 @@ app.use("/api/mandi-prices", mandiPricesRouter);
 app.use("/api/pools", poolsRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/farmer", farmerRouter);
+app.use("/api/farmers", farmersRouter);
 app.use("/api/notifications", notificationsRouter);
+app.use("/api/wishlist", wishlistRouter);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

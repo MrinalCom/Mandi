@@ -21,20 +21,38 @@ mandi average.
 
 ## Features
 
-Beyond the core listing/order flow, six things address specific gaps from the problem
+Beyond the core listing/order flow, these address specific gaps from the problem
 statement:
 
-- **Trust & ratings** — a commission agent (arhtiya) used to vouch for both sides at the
-  mandi; without one, buyers need another way to judge a farmer. Buyers rate farmers
-  1–5 stars after delivery, and the average shows on every listing.
+**Trust, since there's no commission agent to vouch for anyone anymore**
+- **Ratings** — buyers rate farmers 1–5 stars after delivery; the average shows on every
+  listing.
 - **Verified Farmer badge** — computed automatically from delivery history (3+ completed
   orders), not self-declared, so it can't be gamed by a new account.
+- **Farmer public profiles** — a buyer can click through from any listing to a farmer's
+  full track record: rating, completed orders, every review left, and everything else
+  they currently have for sale.
+
+**Staying informed without checking the app all day**
 - **In-app notifications** — a farmer gets pinged the moment a buyer orders, when a pool
   they've joined fills, or when a review comes in; a buyer gets pinged as their order
   moves through pickup and delivery. Pushed live over the existing Socket.IO connection.
+- **Price watchlist & alerts** — watch a crop from the price board and get notified when
+  its mandi price moves sharply (≥8% day-over-day), instead of re-checking every morning.
+- **Price trend chart** — the last 14 days for a crop, not just today's snapshot, so a
+  price spike or crash is visible before it's reflected in a single day's number.
+
+**Finding and buying the right thing**
 - **Location filters** — state/district dropdowns on the marketplace and price board,
-  populated from real listing data rather than a hardcoded list, so buyers can narrow to
-  their region.
+  populated from real listing data rather than a hardcoded list.
+- **Wishlist** — save a listing to buy later instead of losing it once you've navigated
+  away.
+- **Buy again** — reorder from a past delivered order in one click; checks the listing is
+  still active and has stock before adding it to cart, rather than assuming it does.
+- **Order status filters** — split an order history into in-progress / completed /
+  cancelled once it's long enough that scrolling through everything stops being useful.
+
+**Farmer tools**
 - **Real harvest photos** — farmers can attach an actual photo of their produce (resized
   and compressed client-side, no object storage needed) instead of relying only on the
   representative stock photo.
@@ -56,8 +74,8 @@ cd frontend && npm install && npm run dev     # http://localhost:3000
 ```
 
 A fresh database gets the full schema from `backend/src/db/init.sql` automatically. If
-you're upgrading an existing database created before reviews/notifications were added,
-apply the migration once:
+you're upgrading an existing database, apply any migrations added since (`backend/src/db/migrations/`)
+once:
 
 ```bash
 cd backend && npm run migrate
