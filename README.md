@@ -15,14 +15,35 @@ mandi average.
 | | |
 |---|---|
 | ![Landing page](./docs/screenshots/home.jpg) | ![Marketplace](./docs/screenshots/marketplace.jpg) |
-| Landing page — multi-language slogan strip and a live mandi price ticker | Marketplace — direct listings with photos, no commission layer |
+| Landing page — multi-language slogan strip and a live mandi price ticker | Marketplace — listings with wishlist hearts, farmer ratings, and Verified badges |
 | ![Mandi price board](./docs/screenshots/mandi-prices.jpg) | ![Farmer dashboard](./docs/screenshots/dashboard.jpg) |
-| Mandi price board — min/max/modal price per crop, per mandi | Farmer dashboard — your price vs. that day's mandi average |
+| Mandi price board — 14-day trend chart plus a "Watch this crop" price alert | Farmer dashboard — your price vs. that day's mandi average, CSV export |
+| ![Group Selling](./docs/screenshots/pools.jpg) | ![Wishlist](./docs/screenshots/wishlist.jpg) |
+| Group Selling — farmers pooling a crop toward a bulk buyer's minimum order | Wishlist — save a listing to buy later, persists across devices |
+| ![Orders](./docs/screenshots/orders.jpg) | ![Farmer public profile](./docs/screenshots/farmer-profile.jpg) |
+| Orders — status filters, live tracking timeline, one-click "Buy again" | Farmer public profile — rating, verified status, reviews, active listings |
+| ![Notifications](./docs/screenshots/notifications.jpg) | ![Mandi Assistant](./docs/screenshots/assistant.jpg) |
+| In-app notifications — pushed live over the existing Socket.IO connection | Mandi Assistant — the 15-agent LangGraph chat widget, shown here in no-LLM fallback mode |
 
 ## Features
 
-Beyond the core listing/order flow, these address specific gaps from the problem
-statement:
+**Core marketplace**
+- **Direct listings** — farmer posts crop, quantity, price/kg, quality grade, and photo;
+  buyers order directly, no commission layer between the two prices shown.
+- **Mandi price board** — daily min/max/modal price per crop, per mandi, seeded in the
+  same shape as the government's real Agmarknet dataset so a live feed is a drop-in swap
+  (`npm run fetch-prices`, with or without a real `AGMARKNET_API_KEY`).
+- **Group Selling (pools)** — several farmers combine listings of the same crop in the
+  same mandi zone into one lot that meets a bulk buyer's minimum order.
+- **Cart, checkout, and escrow-style orders** — a buyer's payment is held until they
+  confirm delivery; the order pipeline (`pending → confirmed → picked up → delivered →
+  paid_out`) is tracked live over Socket.IO on both sides.
+- **English/Hindi toggle**, plus a decorative multi-language slogan marquee (8 Indian
+  languages) and a live mandi-price ticker on the landing page.
+- **Curated crop photography** everywhere a listing shows up, with a graceful emoji
+  fallback if an image ever fails to load.
+
+Beyond that core flow, these address specific gaps from the problem statement:
 
 **Trust, since there's no commission agent to vouch for anyone anymore**
 - **Ratings** — buyers rate farmers 1–5 stars after delivery; the average shows on every
