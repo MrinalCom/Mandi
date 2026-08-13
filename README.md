@@ -58,9 +58,49 @@ statement:
   representative stock photo.
 - **Earnings export** — a farmer's sale history exports to CSV for their own records.
 
+## Mandi Assistant — a 15-agent LangGraph system
+
+A chat widget (bottom-right, every page) backed by a real `StateGraph`, not a single
+mega-prompt pretending to be many agents. A **supervisor node** classifies each message
+via structured output and routes it — one conditional edge per specialist — to exactly
+one of 15 specialist nodes:
+
+| Trust & discovery | Staying informed | Buyer/farmer help |
+|---|---|---|
+| Trust Summarizer | Price Advisor | Buyer Matchmaker |
+| Fraud Watchdog | Market Analyst | Listing Writer |
+| Onboarding Guide | Order Status Assistant | Quality Grader |
+| FAQ Support | | Pool Advisor |
+| | | Negotiation Coach |
+| | | Translator |
+| | | Logistics Planner |
+| | | Complaint Handler |
+
+7 of the 15 are grounded in real DB-backed tools (`get_mandi_price`, `search_listings`,
+`get_open_pools`, `get_order_status`, `get_price_trend`, `get_farmer_reviews`) — a
+specialist never invents a price or an order status, it looks one up. `get_order_status`
+closes over the requester's identity server-side rather than trusting an LLM-supplied
+user ID, the same pattern the tool factory in the sibling Restaurant project uses.
+
+No `ANTHROPIC_API_KEY`, or the API call fails for any reason (rate limit, timeout, bad
+key)? The whole thing degrades to a no-LLM fallback — a real DB price lookup if the
+message names a known crop, then a keyword-matched FAQ, then a generic pointer to the
+right page. The chat widget shows a "Basic mode" tag whenever an answer came from there
+instead of Claude, so degradation is visible, not silent.
+
+```
+backend/src/agents/
+├── tools.ts        6 DB-backed LangChain tools, built per-request so a user's identity
+│                   is closed over rather than trusted as an LLM argument
+├── specialists.ts  the 15 specialist configs — system prompt + which tools each gets
+└── mandiGraph.ts   the StateGraph: supervisor (structured-output routing) + 15
+                    specialist nodes, each a small ReAct agent, all → END
+```
+
 ## Stack
 
-- **Backend:** Express + TypeScript, PostgreSQL, JWT auth, Socket.IO (live order status)
+- **Backend:** Express + TypeScript, PostgreSQL, JWT auth, Socket.IO (live order status),
+  LangGraph + LangChain + Claude (Mandi Assistant)
 - **Frontend:** Next.js (App Router, TypeScript), Recharts, English/Hindi label toggle,
   curated crop photography
 
@@ -99,6 +139,10 @@ With `AGMARKNET_API_KEY` set in `.env` (get one at
 from the government's actual Agmarknet feed. Without a key it falls back to a
 realistically-shaped synthetic dataset — same schema either way, so the rest of the app
 doesn't care which source populated it.
+
+Set `ANTHROPIC_API_KEY` in `.env` (get one at [console.anthropic.com](https://console.anthropic.com))
+to turn on the Mandi Assistant chat widget. Without it, the widget still works — it just
+answers in no-LLM fallback mode instead of routing through the 15-agent graph.
 
 Demo logins (password `password123`):
 

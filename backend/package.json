@@ -12,6 +12,9 @@
     "fetch-prices": "tsx src/scripts/fetchMandiPrices.ts"
   },
   "dependencies": {
+    "@langchain/anthropic": "^1.5.1",
+    "@langchain/core": "^1.2.3",
+    "@langchain/langgraph": "^1.4.8",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

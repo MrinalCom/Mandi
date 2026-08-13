@@ -12,6 +12,7 @@ import { farmerRouter } from "./routes/farmer.routes.js";
 import { farmersRouter } from "./routes/farmers.routes.js";
 import { notificationsRouter } from "./routes/notifications.routes.js";
 import { wishlistRouter } from "./routes/wishlist.routes.js";
+import { assistantRouter } from "./routes/assistant.routes.js";
 import { registerOrderSocket } from "./sockets/orderSocket.js";
 
 const app = express();
@@ -39,6 +40,7 @@ app.use("/api/farmer", farmerRouter);
 app.use("/api/farmers", farmersRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/wishlist", wishlistRouter);
+app.use("/api/assistant", assistantRouter);
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);

@@ -5,6 +5,7 @@ import { CartProvider } from "./lib/CartContext";
 import { LangProvider } from "./lib/i18n";
 import Nav from "./components/Nav";
 import Footer from "./components/Footer";
+import AssistantWidget from "./components/AssistantWidget";
 
 export const metadata = {
   title: "Mandi — Sell your harvest directly",
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <Nav />
                 <main className="app-main">{children}</main>
                 <Footer />
+                <AssistantWidget />
               </div>
             </CartProvider>
           </AuthProvider>

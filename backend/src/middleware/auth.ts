@@ -22,6 +22,21 @@ export function requireAuth(req: AuthedRequest, res: Response, next: NextFunctio
   }
 }
 
+// Decodes the token if present but never rejects — for endpoints that behave
+// the same for anonymous and logged-in users, just with extra context when available.
+export function optionalAuth(req: AuthedRequest, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  const token = header?.startsWith("Bearer ") ? header.slice(7) : undefined;
+  if (token) {
+    try {
+      req.user = jwt.verify(token, process.env.JWT_SECRET!) as { id: string; role: UserRole };
+    } catch {
+      // ignore invalid token, treat as anonymous
+    }
+  }
+  next();
+}
+
 export function requireRole(...roles: UserRole[]) {
   return (req: AuthedRequest, res: Response, next: NextFunction) => {
     if (!req.user || !roles.includes(req.user.role)) {
