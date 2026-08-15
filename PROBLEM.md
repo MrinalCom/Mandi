@@ -3,7 +3,8 @@
 ## 1. The problem we're solving
 
 **Who:** Small and marginal farmers in India (~86% of all farmers) who sell perishable
-produce (vegetables, fruit, grain) through the traditional mandi system.
+produce (vegetables, fruit, grain) through the traditional mandi system and its layers
+of commission agents.
 
 **What's broken, with evidence:**
 

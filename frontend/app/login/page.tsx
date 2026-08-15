@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     try {
-      const res = await api.post<{ user: any; token: string }>("/api/auth/login", { phone, password });
+      const res = await api.post<{ user: any; token: string }>("/api/auth/login", { phone: phone.trim(), password });
       login(res.user, res.token);
       router.push(res.user.role === "farmer" ? "/listings/mine" : "/marketplace");
     } catch (err) {

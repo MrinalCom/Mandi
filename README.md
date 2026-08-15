@@ -1,7 +1,7 @@
 # Mandi
 
-A direct farmer-to-buyer produce marketplace. See [PROBLEM.md](./PROBLEM.md) for the
-problem statement, sources, and full product/architecture plan.
+A direct farmer-to-buyer produce marketplace built to cut out commission middlemen. See
+[PROBLEM.md](./PROBLEM.md) for the problem statement, sources, and full product/architecture plan.
 
 Built to close a specific gap: existing digital mandis (eNAM, Ninjacart, DeHaat) mostly
 serve bulk B2B supply chains or urban consumers and leave small/marginal farmers — 86% of

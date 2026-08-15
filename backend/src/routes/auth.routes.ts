@@ -48,7 +48,7 @@ authRouter.post("/register", asyncHandler(async (req, res) => {
 }));
 
 const loginSchema = z.object({
-  phone: z.string().min(6),
+  phone: z.string().min(6).trim(),
   password: z.string(),
 });
 
