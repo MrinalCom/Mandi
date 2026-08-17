@@ -1,11 +1,9 @@
 # Mandi
 
 **Live:** [frontend](https://mandi-frontend-rho.vercel.app) ·
-[backend](https://mandi-backend-gamma.vercel.app/health) — deployed on Vercel with a live
-Neon Postgres database. Both are deployed and independently working; the frontend UI doesn't
-currently call the backend API anywhere in its source (no fetch/axios usage at all), so
-they're live but not yet wired together — that's a frontend feature-building gap, not a
-deployment one.
+[backend](https://mandi-backend-gamma.vercel.app/health) — deployed on Vercel, connected
+(`NEXT_PUBLIC_API_URL` wired and baked into the deployed frontend bundle), and verified with
+a real registration request against the live Neon Postgres database.
 
 A direct farmer-to-buyer produce marketplace. See [PROBLEM.md](./PROBLEM.md) for the
 problem statement, sources, and full product/architecture plan.
